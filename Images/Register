@@ -1,0 +1,60 @@
+local ImageLibrary = {}
+
+ImageLibrary.Throw = function(Condition, String)
+    return Condition or error(String)
+end
+
+cloneref = cloneref or function(service) return service end
+isfile = ImageLibrary.Throw(isfile, 'Executor is incompatible!')
+isfolder = ImageLibrary.Throw(isfolder, 'Executor is incompatible!')
+writefile = ImageLibrary.Throw(writefile, 'Executor is incompatible!')
+makefolder = ImageLibrary.Throw(makefolder, 'Executor is incompatible!')
+getcustomasset = ImageLibrary.Throw(getcustomasset, 'Executor is incompatible!')
+
+ImageLibrary.__index = ImageLibrary
+
+local Http = cloneref(game:GetService("HttpService"))
+ImageLibrary.Images = {}
+
+function ImageLibrary:Register(Info)
+    Info = setmetatable(Info or {}, ImageLibrary)
+
+    Info.url = ImageLibrary.Throw(Info.url, "Image URL is missing!")
+    Info.name = ImageLibrary.Throw(Info.name, "Image name is missing!")
+    Info.path = ImageLibrary.Throw(Info.path or ImageLibrary.Path, "Image path is missing!")
+
+    Info.imagepath = Info.path .. "\\" .. Info.name .. ".png"
+    ImageLibrary:CheckPath(Info.path)
+    Info:CreateImage()
+
+    ImageLibrary.Images[Info.name] = Info
+    ImageLibrary.Path = Info.path
+
+    return Info:Get(), Info
+end
+
+function ImageLibrary:Get(Name)
+    local image = ImageLibrary.Images[Name] or self
+    return getcustomasset(image.imagepath)
+end
+
+function ImageLibrary:CheckPath(Path)
+    if not isfolder(Path) then
+        makefolder(Path)
+    end
+end
+
+function ImageLibrary:CreateImage()
+    local Info = ImageLibrary.Throw(self, "Information is missing!")
+
+    if isfile(Info.imagepath) then return end
+
+    local Success, Result = pcall(function()
+        return game:HttpGet(Info.url)
+    end)
+
+    ImageLibrary.Throw(Success, "Failed to fetch image: " .. Info.name)
+    writefile(Info.imagepath, Result)
+end
+
+return ImageLibrary
